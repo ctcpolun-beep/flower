@@ -37,6 +37,26 @@
             font-size: 11px; 
             box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
         }
+        /* 桌面版：為各個 callout 提供合理的預設位置（保留響應式媒體查詢於手機） */
+        /* 將文字卡置於中線（水平置中），垂直位置由各 id 指定以避免重疊 */
+        #anatomy .callout, #anatomy > .callout, #anatomy div.callout { 
+            left: 50% !important; 
+            transform: translateX(-50%) !important; 
+            margin: 0 !important;
+            box-sizing: border-box;
+            white-space: normal;
+            word-break: break-word;
+            width: 160px !important;
+            max-width: 70%;
+        }
+
+        /* 個別高度，依 svg 部位調整（可微調百分比） */
+        #ana-petal { top: 6% !important; }
+        #ana-stem { top: 34% !important; }
+        #ana-leaf { top: 62% !important; }
+        #ana-bulb { top: 82% !important; }
+        /* 修正球莖框過大 bug：強制固定寬度並限制高度自動換行 */
+        #ana-bulb { width: 160px !important; max-width: 160px !important; }
         /* 手機版自動調整位置，避免超出螢幕 */
         @media (max-width: 768px) {
             .callout { width: 140px; }
@@ -72,7 +92,7 @@
         .color-btn:hover { transform: scale(1.15); border-color: rgba(0,0,0,0.2); }
         .color-btn.active { border-color: #333; box-shadow: 0 0 0 3px rgba(255,117,140,0.3); }
 
-        .draggable-item { position: absolute; cursor: pointer; user-select: none; z-index: 25; }
+        .draggable-item { position: absolute; cursor: pointer; user-select: none; z-index: 50; }
         /* iOS safe-area and mobile app optimizations (overrides) */
         @layer utilities {
             .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -287,10 +307,10 @@
             <div class="lg:col-span-2 h-[550px] glass rounded-[60px] relative shadow-2xl flex justify-center items-end" ondragover="allow(event)" ondrop="plS(event)" id="salon-box">
                 <!-- s-canvas 作為插花放置層；同時包含可繪畫的 salon-canvas -->
                 <div id="s-canvas" class="absolute inset-0 z-10 pointer-events-auto">
-                    <canvas id="salon-canvas" class="absolute inset-0 w-full h-full" style="touch-action: none;"></canvas>
+                    <canvas id="salon-canvas" class="absolute inset-0 w-full h-full z-10" style="touch-action: none; pointer-events: auto;"></canvas>
                 </div>
                 
-                <svg width="120" height="200" viewBox="0 0 100 130" class="opacity-80 mb-16 pointer-events-none z-20" style="filter: drop-shadow(0 10px 20px rgba(0,188,212,0.3));">
+                <svg width="180" height="300" viewBox="0 0 100 130" class="opacity-90 mb-8 pointer-events-none z-20" style="filter: drop-shadow(0 14px 28px rgba(0,188,212,0.35));">
                     <defs>
                         <linearGradient id="waterBlueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" stop-color="#e0f7fa" />
@@ -300,8 +320,8 @@
                     <path d="M40,35 Q35,45 35,60 Q35,85 38,100 Q40,115 50,120 Q60,115 62,100 Q65,85 65,60 Q65,45 60,35 Z" 
                           fill="url(#waterBlueGrad)" 
                           stroke="#4fc3f7" 
-                          stroke-width="1"/>
-                    <ellipse cx="50" cy="35" rx="10" ry="2.5" fill="#b3e5fc" opacity="0.8"/>
+                          stroke-width="1.4"/>
+                    <ellipse cx="50" cy="35" rx="12" ry="3" fill="#b3e5fc" opacity="0.9"/>
                 </svg>
 
                 <!-- 修正：提高按鈕容器的 z-index 到 z-30，確保在 s-canvas (z-10) 之上可被點擊 -->
@@ -461,23 +481,93 @@
                 const d = document.createElement('div');
                 d.className = "glass p-3 rounded-2xl flex items-center justify-center cursor-grab shadow-sm";
                 d.setAttribute('draggable', 'true');
-                
-                // --- iOS 關鍵修正 ---
-                d.style.touchAction = 'none'; // 禁止捲動，釋放拖拉
-                d.addEventListener('touchstart', (e) => {
-                    // 讓手機知道我們要開始拖了
-                }, {passive: false});
 
-                d.ondragstart = (e) => { 
-                    e.dataTransfer.setData("idx", i); 
-                    // 增加觸覺回饋（如果有支援）
+                // --- iOS 與觸控容錯：禁止捲動並提供 touch 拖拉替代實作 ---
+                d.style.touchAction = 'none';
+
+                // touch fallback: create a visual clone that follows the finger
+                d.addEventListener('touchstart', function(e){
+                    e.preventDefault();
+                    const t = e.touches && e.touches[0];
+                    if(!t) return;
+                    const clone = this.cloneNode(true);
+                    clone.style.position = 'fixed';
+                    clone.style.left = (t.clientX - 28) + 'px';
+                    clone.style.top = (t.clientY - 28) + 'px';
+                    clone.style.width = '56px';
+                    clone.style.height = '56px';
+                    clone.style.zIndex = 9999;
+                    clone.style.pointerEvents = 'none';
+                    clone.classList.add('inv-drag-clone');
+                    document.body.appendChild(clone);
+                    this._touchDrag = { clone, startX: t.clientX, startY: t.clientY, idx: i };
+                }, {passive:false});
+
+                d.addEventListener('touchmove', function(e){
+                    if(!this._touchDrag) return;
+                    e.preventDefault();
+                    const t = e.touches && e.touches[0];
+                    if(!t) return;
+                    this._touchDrag.clone.style.left = (t.clientX - 28) + 'px';
+                    this._touchDrag.clone.style.top = (t.clientY - 28) + 'px';
+                }, {passive:false});
+
+                d.addEventListener('touchend', function(e){
+                    if(!this._touchDrag) return;
+                    const up = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : { clientX: this._touchDrag.startX, clientY: this._touchDrag.startY };
+                    const salonRect = document.getElementById('salon-box').getBoundingClientRect();
+                    if(up.clientX > salonRect.left && up.clientX < salonRect.right && up.clientY > salonRect.top && up.clientY < salonRect.bottom) {
+                        const x = up.clientX - salonRect.left - 40;
+                        const y = up.clientY - salonRect.top - 80;
+                        placeItemFromInventory(this._touchDrag.idx, x, y);
+                    }
+                    try { document.body.removeChild(this._touchDrag.clone); } catch(e) {}
+                    delete this._touchDrag;
+                }, {passive:false});
+
+                // native dragstart for desktop
+                d.ondragstart = (e) => {
+                    e.dataTransfer.setData("idx", i);
                     if (window.navigator.vibrate) window.navigator.vibrate(10);
                 };
-                
+                // tap/click fallback: allow quick add on mobile by tapping the inventory item
+                d.addEventListener('click', (ev) => {
+                    ev.preventDefault();
+                    const box = document.getElementById('salon-box').getBoundingClientRect();
+                    const x = (box.width/2) - 40;
+                    const y = (box.height/2) - 80;
+                    placeItemFromInventory(i, x, y);
+                });
+                d.addEventListener('touchend', function(ev){
+                    // if touch drag clone was used, touchend on the original will be after drop; ignore
+                    if(this._touchDrag) return;
+                    ev.preventDefault();
+                    const box = document.getElementById('salon-box').getBoundingClientRect();
+                    const x = (box.width/2) - 40;
+                    const y = (box.height/2) - 80;
+                    placeItemFromInventory(i, x, y);
+                }, {passive:false});
+
                 if(it.isC) d.innerHTML = `<img src="${it.img}" class="w-10 h-10 object-contain pointer-events-none">`;
                 else d.innerHTML = drawT(it.svg, it.color, 30, 60);
                 g.appendChild(d);
             });
+        }
+
+        // touch fallback placement helper (used by touchend handler)
+        function placeItemFromInventory(idx, x, y) {
+            const item = inventory[idx];
+            if(!item) return;
+            const d = document.createElement('div');
+            d.className = "draggable-item transition-transform hover:scale-110 pointer-events-auto";
+            d.style.left = x + 'px'; d.style.top = y + 'px';
+            d.style.zIndex = 60;
+            d.style.touchAction = 'none';
+            d.style.webkitUserDrag = 'element';
+            d.onclick = function(){ this.remove(); };
+            if(item.isC) d.innerHTML = `<img src="${item.img}" class="w-20 h-20 object-contain">`;
+            else d.innerHTML = drawT(item.svg, item.color, 80, 150);
+            document.getElementById('s-canvas').appendChild(d);
         }
 
         function allow(e) { e.preventDefault(); }
@@ -491,7 +581,7 @@
             const y = e.clientY - box.top - 80;
             const d = document.createElement('div');
             d.className = "draggable-item transition-transform hover:scale-110 pointer-events-auto";
-                d.style.left = x + 'px'; d.style.top = y + 'px';
+                d.style.left = x + 'px'; d.style.top = y + 'px'; d.style.zIndex = 60;
             
             // ensure draggable items are touch-friendly
             d.style.touchAction = 'none';
@@ -533,6 +623,13 @@
             renderG(); renderInv(); initP(); updateTimeline(33);
             document.getElementById('hero-tulip').innerHTML = drawT('classic', 'var(--p)', 120, 180);
             initSalonCanvas();
+
+            // ensure salon container also accepts drops (desktop fallback)
+            const salon = document.getElementById('salon-box');
+            if (salon) {
+                salon.addEventListener('dragover', function(e){ allow(e); }, false);
+                salon.addEventListener('drop', function(e){ plS(e); }, false);
+            }
         };
 
         // --- Salon drawing layer ---
@@ -556,6 +653,8 @@
                 ctx.lineWidth = 6;
             }
 
+            // enable or disable salon drawing (true = salon canvas accepts drawing)
+            let salonAllowDrawing = false;
             let drawing = false;
             let last = { x: 0, y: 0 };
 
@@ -568,6 +667,24 @@
             }
 
             function start(e) {
+                // if salon drawing is disabled, skip immediately
+                if (!salonAllowDrawing) return;
+
+                // hit-test: if user touched a UI element or a draggable item, do not start drawing
+                const tPoint = (e.touches && e.touches[0]) ? e.touches[0] : e;
+                const cx = tPoint.clientX, cy = tPoint.clientY;
+                // temporarily disable canvas pointer to detect underlying element
+                const prev = canvas.style.pointerEvents;
+                canvas.style.pointerEvents = 'none';
+                const el = document.elementFromPoint(cx, cy);
+                canvas.style.pointerEvents = prev || 'auto';
+                if (el) {
+                    if (el.closest && (el.closest('.draggable-item') || el.closest('[draggable]') || el.closest('button') || el.closest('.color-btn') || el.closest('input') || el.closest('a'))) {
+                        // user intended to interact with UI or drag an item — don't begin drawing
+                        return;
+                    }
+                }
+
                 e.preventDefault();
                 drawing = true;
                 last = getPos(e);
@@ -591,15 +708,18 @@
                 ctx.closePath();
             }
 
-            // Mouse
-            canvas.addEventListener('mousedown', start, false);
-            window.addEventListener('mousemove', move, false);
-            window.addEventListener('mouseup', end, false);
+            // Only attach drawing handlers when salon drawing is explicitly allowed
+            if (salonAllowDrawing) {
+                // Mouse
+                canvas.addEventListener('mousedown', start, false);
+                window.addEventListener('mousemove', move, false);
+                window.addEventListener('mouseup', end, false);
 
-            // Touch
-            canvas.addEventListener('touchstart', start, { passive: false });
-            canvas.addEventListener('touchmove', move, { passive: false });
-            canvas.addEventListener('touchend', end, false);
+                // Touch
+                canvas.addEventListener('touchstart', start, { passive: false });
+                canvas.addEventListener('touchmove', move, { passive: false });
+                canvas.addEventListener('touchend', end, false);
+            }
 
             // Resize observer to adjust canvas
             const ro = new ResizeObserver(resize);
