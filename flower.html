@@ -263,8 +263,10 @@
             
             <!-- 插花沙龍區域：修正按鈕層級 -->
             <div class="lg:col-span-2 h-[550px] glass rounded-[60px] relative shadow-2xl flex justify-center items-end" ondragover="allow(event)" ondrop="plS(event)" id="salon-box">
-                <!-- s-canvas 作為插花放置層 -->
-                <div id="s-canvas" class="absolute inset-0 z-10 pointer-events-auto"></div>
+                <!-- s-canvas 作為插花放置層；同時包含可繪畫的 salon-canvas -->
+                <div id="s-canvas" class="absolute inset-0 z-10 pointer-events-auto">
+                    <canvas id="salon-canvas" class="absolute inset-0 w-full h-full" style="touch-action: none;"></canvas>
+                </div>
                 
                 <!-- 優雅水藍細頸玻璃瓶 -->
                 <svg width="150" height="240" viewBox="0 0 100 130" class="opacity-40 mb-8 pointer-events-none" style="filter: drop-shadow(0 10px 20px rgba(0,188,212,0.2));">
@@ -493,7 +495,87 @@
 
             renderG(); renderInv(); initP(); updateTimeline(33);
             document.getElementById('hero-tulip').innerHTML = drawT('classic', 'var(--p)', 120, 180);
+            initSalonCanvas();
         };
+
+        // --- Salon drawing layer ---
+        function initSalonCanvas() {
+            const box = document.getElementById('salon-box');
+            const canvas = document.getElementById('salon-canvas');
+            if(!canvas || !box) return;
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                const rect = box.getBoundingClientRect();
+                canvas.width = Math.floor(rect.width * devicePixelRatio);
+                canvas.height = Math.floor(rect.height * devicePixelRatio);
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                ctx.scale(devicePixelRatio, devicePixelRatio);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = 6;
+            }
+
+            let drawing = false;
+            let last = { x: 0, y: 0 };
+
+            function getPos(e) {
+                const r = canvas.getBoundingClientRect();
+                if(e.touches && e.touches[0]) {
+                    return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
+                }
+                return { x: e.clientX - r.left, y: e.clientY - r.top };
+            }
+
+            function start(e) {
+                e.preventDefault();
+                drawing = true;
+                last = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(last.x, last.y);
+                ctx.strokeStyle = currentColor || '#000';
+            }
+
+            function move(e) {
+                if(!drawing) return;
+                e.preventDefault();
+                const p = getPos(e);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+                last = p;
+            }
+
+            function end(e) {
+                if(!drawing) return;
+                drawing = false;
+                ctx.closePath();
+            }
+
+            // Mouse
+            canvas.addEventListener('mousedown', start, false);
+            window.addEventListener('mousemove', move, false);
+            window.addEventListener('mouseup', end, false);
+
+            // Touch
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', move, { passive: false });
+            canvas.addEventListener('touchend', end, false);
+
+            // Resize observer to adjust canvas
+            const ro = new ResizeObserver(resize);
+            ro.observe(box);
+            resize();
+
+            // expose clear for use elsewhere
+            window.clearSalon = function() {
+                // remove draggable items
+                const s = document.getElementById('s-canvas');
+                Array.from(s.querySelectorAll('.draggable-item')).forEach(n=>n.remove());
+                // clear drawing layer
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+            }
+        }
     </script>
 </body>
 </html>
