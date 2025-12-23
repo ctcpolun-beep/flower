@@ -26,6 +26,7 @@
         @keyframes grow { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
         .callout { position: absolute; padding: 15px; border-radius: 20px; width: 240px; opacity: 0; transition: 0.4s; pointer-events: none; z-index: 50; font-size: 12px; box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+        .callout { max-width: calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right)); }
         .callout.active { opacity: 1; pointer-events: auto; transform: scale(1); }
 
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; cursor: pointer; }
@@ -85,6 +86,9 @@
             #inv-grid div {
                 touch-action: none !important;
             }
+            
+            /* ensure fixed nav avoids notch */
+            nav.safe-top { top: calc(env(safe-area-inset-top) + 1rem) !important; }
             }
     </style>
         <script>
@@ -96,7 +100,7 @@
 </head>
 <body id="main-container">
 
-    <nav class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass px-6 py-3 rounded-full shadow-2xl flex space-x-6 text-[10px] font-bold uppercase tracking-widest">
+    <nav class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass px-6 py-3 rounded-full shadow-2xl flex space-x-6 text-[10px] font-bold uppercase tracking-widest safe-top">
         <a href="#hero" class="hover:text-pink-500 transition">Hero</a>
         <a href="#history" class="hover:text-pink-500 transition">History</a>
         <a href="#anatomy" class="hover:text-pink-500 transition">Science</a>
@@ -339,6 +343,7 @@
             if(type==='fringed') p = `M25,40 C5,40 5,10 25,0 C45,10 45,40 25,40 M10,35 L15,38 L10,40 M20,40 L22,43 L20,45 M30,40 L32,43 L30,45 M40,35 L35,38 L40,40`;
             return `<svg viewBox="0 0 50 150" width="${w}" height="${h}" class="sway mx-auto"><path d="M25,150 L25,40" stroke="var(--l)" stroke-width="4"/><path d="${p}" fill="${color}"/></svg>`;
         }
+        
 
         function drawL(idx) {
             let c = { d: "#5d4037", b: "#d2b48c", l: "#4a7c59", f: "#ff758c" };
@@ -439,7 +444,9 @@
             inventory.forEach((it, i) => {
                 const d = document.createElement('div');
                 d.className = "glass p-3 rounded-2xl flex items-center justify-center cursor-grab hover:scale-105 transition shadow-sm";
+                d.setAttribute('draggable', 'true');
                 d.draggable = true;
+                d.style.touchAction = 'none';
                 d.ondragstart = (e) => { e.dataTransfer.setData("idx", i); };
                 if(it.isC) d.innerHTML = `<img src="${it.img}" class="w-10 h-10 object-contain">`;
                 else d.innerHTML = drawT(it.svg, it.color, 30, 60);
@@ -458,7 +465,11 @@
             const y = e.clientY - box.top - 80;
             const d = document.createElement('div');
             d.className = "draggable-item transition-transform hover:scale-110 pointer-events-auto";
-            d.style.left = x + 'px'; d.style.top = y + 'px';
+                d.style.left = x + 'px'; d.style.top = y + 'px';
+            
+            // ensure draggable items are touch-friendly
+            d.style.touchAction = 'none';
+            d.style.webkitUserDrag = 'element';
             d.onclick = function() { this.remove(); };
             if(item.isC) d.innerHTML = `<img src="${item.img}" class="w-20 h-20 object-contain">`;
             else d.innerHTML = drawT(item.svg, item.color, 80, 150);
@@ -507,11 +518,13 @@
 
             function resize() {
                 const rect = box.getBoundingClientRect();
-                canvas.width = Math.floor(rect.width * devicePixelRatio);
-                canvas.height = Math.floor(rect.height * devicePixelRatio);
+                const dpr = Math.max(1, window.devicePixelRatio || 1);
+                canvas.width = Math.floor(rect.width * dpr);
+                canvas.height = Math.floor(rect.height * dpr);
                 canvas.style.width = rect.width + 'px';
                 canvas.style.height = rect.height + 'px';
-                ctx.scale(devicePixelRatio, devicePixelRatio);
+                // reset transform then scale once to avoid cumulative scaling
+                if (ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
                 ctx.lineWidth = 6;
@@ -566,6 +579,10 @@
             const ro = new ResizeObserver(resize);
             ro.observe(box);
             resize();
+            
+            // allow drag/drop to work when dropping onto canvas: forward to salon handlers
+            canvas.addEventListener('dragover', function(e){ allow(e); }, false);
+            canvas.addEventListener('drop', function(e){ plS(e); }, false);
 
             // expose clear for use elsewhere
             window.clearSalon = function() {
