@@ -75,7 +75,17 @@
             }
 
             .cursor-grab { cursor: grab; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-        }
+
+            /* 強制告訴 iOS：這些東西是要被拖拉的，不要捲動頁面 */
+            [draggable="true"] {
+                touch-action: none !important;
+                -webkit-user-drag: element;
+            }
+
+            #inv-grid div {
+                touch-action: none !important;
+            }
+            }
     </style>
         <script>
             // 註冊 Service Worker
@@ -295,12 +305,6 @@
     </div>
 
     <script>
-        // 啟動 mobile-drag-drop polyfill 以支援 iOS Safari 的拖放
-        if (window.MobileDragDrop && typeof MobileDragDrop.polyfill === 'function') {
-            MobileDragDrop.polyfill({
-                dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
-            });
-        }
         // 完整的 15 品系百科資料庫
         const VARS = [
             { id: 1, name: "單瓣早花型", color: "#ff758c", svg: "classic", origin: "中亞天山山脈", bloomTime: "3月上旬 - 3月下旬", height: "25-35cm", history: "最早於16世紀引入歐洲的純粹型態，保留了野生鬱金香的原始基因。這個品系是所有現代鬱金香的祖先，其簡潔的六瓣結構被視為完美比例的典範。在文藝復興時期的植物畫中頻繁出現。", feature: "花瓣厚實且具蠟質層，能有效抵禦早春的霜凍與多變氣候。單層花瓣使其在清晨陽光下呈現半透明的夢幻質感。花期雖短但開花整齊，常用於大面積的景觀佈置。", care: "需充足日照，排水良好的砂質壤土最佳。耐寒性極強，適合寒帶種植。", lang: "純潔與希望", use: "適合庭園前景、盆栽、切花" },
@@ -480,6 +484,13 @@
         }
 
         window.onload = () => {
+            // 初始化拖拉翻譯機 (放在 onload 裡確保 script 已載入)
+            if (window.MobileDragDrop && typeof MobileDragDrop.polyfill === 'function') {
+                MobileDragDrop.polyfill({
+                    dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
+                });
+            }
+
             renderG(); renderInv(); initP(); updateTimeline(33);
             document.getElementById('hero-tulip').innerHTML = drawT('classic', 'var(--p)', 120, 180);
         };
