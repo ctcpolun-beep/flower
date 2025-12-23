@@ -2,9 +2,16 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>鬱金香之森</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/release/default.css">
+    <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/release/index.min.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="鬱金香之森">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Noto+Serif+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -47,6 +54,28 @@
         .color-btn.active { border-color: #333; box-shadow: 0 0 0 3px rgba(255,117,140,0.3); }
 
         .draggable-item { position: absolute; cursor: pointer; user-select: none; z-index: 25; }
+        /* iOS safe-area and mobile app optimizations (overrides) */
+        @layer utilities {
+            .no-scrollbar::-webkit-scrollbar { display: none; }
+            .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+            body {
+                min-height: 100dvh;
+                background-color: #fffafb;
+                overscroll-behavior-y: none;
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+                padding-left: env(safe-area-inset-left);
+                padding-right: env(safe-area-inset-right);
+            }
+
+            #main-container {
+                height: 100dvh;
+                height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            }
+
+            .cursor-grab { cursor: grab; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        }
     </style>
         <script>
             // 註冊 Service Worker
@@ -55,14 +84,9 @@
             }
         </script>
 </head>
-<body id="main-body">
+<body id="main-container">
 
     <nav class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass px-6 py-3 rounded-full shadow-2xl flex space-x-6 text-[10px] font-bold uppercase tracking-widest">
-    <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="鬱金香之森">
-    <link rel="apple-touch-icon" href="icon-192.png">
         <a href="#hero" class="hover:text-pink-500 transition">Hero</a>
         <a href="#history" class="hover:text-pink-500 transition">History</a>
         <a href="#anatomy" class="hover:text-pink-500 transition">Science</a>
@@ -271,6 +295,12 @@
     </div>
 
     <script>
+        // 啟動 mobile-drag-drop polyfill 以支援 iOS Safari 的拖放
+        if (window.MobileDragDrop && typeof MobileDragDrop.polyfill === 'function') {
+            MobileDragDrop.polyfill({
+                dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
+            });
+        }
         // 完整的 15 品系百科資料庫
         const VARS = [
             { id: 1, name: "單瓣早花型", color: "#ff758c", svg: "classic", origin: "中亞天山山脈", bloomTime: "3月上旬 - 3月下旬", height: "25-35cm", history: "最早於16世紀引入歐洲的純粹型態，保留了野生鬱金香的原始基因。這個品系是所有現代鬱金香的祖先，其簡潔的六瓣結構被視為完美比例的典範。在文藝復興時期的植物畫中頻繁出現。", feature: "花瓣厚實且具蠟質層，能有效抵禦早春的霜凍與多變氣候。單層花瓣使其在清晨陽光下呈現半透明的夢幻質感。花期雖短但開花整齊，常用於大面積的景觀佈置。", care: "需充足日照，排水良好的砂質壤土最佳。耐寒性極強，適合寒帶種植。", lang: "純潔與希望", use: "適合庭園前景、盆栽、切花" },
