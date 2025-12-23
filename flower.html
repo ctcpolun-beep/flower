@@ -25,8 +25,26 @@
         .grow-anim { animation: grow 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         @keyframes grow { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-        .callout { position: absolute; padding: 15px; border-radius: 20px; width: 240px; opacity: 0; transition: 0.4s; pointer-events: none; z-index: 50; font-size: 12px; box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
-        .callout { max-width: calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right)); }
+        .callout { 
+            position: absolute; 
+            padding: 12px; 
+            border-radius: 18px; 
+            width: 160px; /* 縮小寬度以適應手機 */
+            opacity: 0; 
+            transition: 0.4s; 
+            pointer-events: none; 
+            z-index: 50; 
+            font-size: 11px; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
+        }
+        /* 手機版自動調整位置，避免超出螢幕 */
+        @media (max-width: 768px) {
+            .callout { width: 140px; }
+            #ana-petal { top: 10px !important; right: 10px !important; }
+            #ana-stem { top: 40% !important; left: 10px !important; }
+            #ana-leaf { bottom: 20% !important; right: 10px !important; }
+            #ana-bulb { bottom: 10px !important; left: 10px !important; }
+        }
         .callout.active { opacity: 1; pointer-events: auto; transform: scale(1); }
 
         input[type=range] { appearance: none; -webkit-appearance: none; -moz-appearance: none; width: 100%; background: transparent; cursor: pointer; }
@@ -272,8 +290,7 @@
                     <canvas id="salon-canvas" class="absolute inset-0 w-full h-full" style="touch-action: none;"></canvas>
                 </div>
                 
-                <!-- 優雅水藍細頸玻璃瓶 -->
-                <svg width="150" height="240" viewBox="0 0 100 130" class="opacity-40 mb-8 pointer-events-none" style="filter: drop-shadow(0 10px 20px rgba(0,188,212,0.2));">
+                <svg width="120" height="200" viewBox="0 0 100 130" class="opacity-80 mb-16 pointer-events-none z-20" style="filter: drop-shadow(0 10px 20px rgba(0,188,212,0.3));">
                     <defs>
                         <linearGradient id="waterBlueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" stop-color="#e0f7fa" />
@@ -283,9 +300,8 @@
                     <path d="M40,35 Q35,45 35,60 Q35,85 38,100 Q40,115 50,120 Q60,115 62,100 Q65,85 65,60 Q65,45 60,35 Z" 
                           fill="url(#waterBlueGrad)" 
                           stroke="#4fc3f7" 
-                          stroke-width="0.5"/>
-                    <ellipse cx="50" cy="35" rx="10" ry="2.5" fill="#b3e5fc" opacity="0.6"/>
-                    <ellipse cx="50" cy="120" rx="18" ry="3" fill="#0288d1" opacity="0.15"/>
+                          stroke-width="1"/>
+                    <ellipse cx="50" cy="35" rx="10" ry="2.5" fill="#b3e5fc" opacity="0.8"/>
                 </svg>
 
                 <!-- 修正：提高按鈕容器的 z-index 到 z-30，確保在 s-canvas (z-10) 之上可被點擊 -->
@@ -443,12 +459,22 @@
             document.getElementById('inv-c').innerText = inventory.length;
             inventory.forEach((it, i) => {
                 const d = document.createElement('div');
-                d.className = "glass p-3 rounded-2xl flex items-center justify-center cursor-grab hover:scale-105 transition shadow-sm";
+                d.className = "glass p-3 rounded-2xl flex items-center justify-center cursor-grab shadow-sm";
                 d.setAttribute('draggable', 'true');
-                d.draggable = true;
-                d.style.touchAction = 'none';
-                d.ondragstart = (e) => { e.dataTransfer.setData("idx", i); };
-                if(it.isC) d.innerHTML = `<img src="${it.img}" class="w-10 h-10 object-contain">`;
+                
+                // --- iOS 關鍵修正 ---
+                d.style.touchAction = 'none'; // 禁止捲動，釋放拖拉
+                d.addEventListener('touchstart', (e) => {
+                    // 讓手機知道我們要開始拖了
+                }, {passive: false});
+
+                d.ondragstart = (e) => { 
+                    e.dataTransfer.setData("idx", i); 
+                    // 增加觸覺回饋（如果有支援）
+                    if (window.navigator.vibrate) window.navigator.vibrate(10);
+                };
+                
+                if(it.isC) d.innerHTML = `<img src="${it.img}" class="w-10 h-10 object-contain pointer-events-none">`;
                 else d.innerHTML = drawT(it.svg, it.color, 30, 60);
                 g.appendChild(d);
             });
