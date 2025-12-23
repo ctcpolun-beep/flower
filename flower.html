@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鬱金香之森</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Noto+Serif+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --p: #ff758c; --s: #5d4037; --l: #4a7c59; --bg: #fffafb; --text: #2d3436; }
+        body { font-family: 'Noto Serif TC', serif; background-color: var(--bg); color: var(--text); transition: 0.5s; overflow-x: hidden; scroll-behavior: smooth; }
+        .cute-font { font-family: 'ZCOOL XiaoWei', serif; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); }
+        
+        .sway { animation: sway 4s ease-in-out infinite; transform-origin: bottom center; }
+        @keyframes sway { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+        .grow-anim { animation: grow 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes grow { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .callout { position: absolute; padding: 15px; border-radius: 20px; width: 240px; opacity: 0; transition: 0.4s; pointer-events: none; z-index: 50; font-size: 12px; box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+        .callout.active { opacity: 1; pointer-events: auto; transform: scale(1); }
+
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; cursor: pointer; }
+        input[type=range]::-webkit-slider-runnable-track { height: 8px; background: linear-gradient(to right, #ddd 0%, var(--p) 50%, #ddd 100%); border-radius: 10px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: var(--p); cursor: grab; margin-top: -8px; box-shadow: 0 0 10px rgba(255,117,140,0.5); transition: transform 0.2s; }
+        input[type=range]::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.2); }
+
+        .plot-box { height: 180px; width: 70px; display: flex; flex-direction: column-reverse; align-items: center; position: relative; }
+        .soil-base { width: 60px; height: 12px; background: rgba(93, 64, 55, 0.2); border-radius: 50%; position: absolute; bottom: -5px; transition: 0.5s; }
+        .plot-box.active .soil-base { background: #5d4037; transform: scale(1.1); }
+        
+        #modal { display: none; }
+        #modal.active { display: flex; align-items: center; justify-content: center; }
+
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: var(--p); border-radius: 10px; }
+        
+        canvas { background: #fff; border-radius: 20px; cursor: crosshair; }
+        
+        .big-action-btn { transition: all 0.3s; cursor: pointer; }
+        .big-action-btn:hover { transform: scale(1.05); box-shadow: 0 10px 30px rgba(255,117,140,0.4); }
+        .big-action-btn:active { transform: scale(0.98); }
+
+        .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+        .color-btn:hover { transform: scale(1.15); border-color: rgba(0,0,0,0.2); }
+        .color-btn.active { border-color: #333; box-shadow: 0 0 0 3px rgba(255,117,140,0.3); }
+
+        .draggable-item { position: absolute; cursor: pointer; user-select: none; z-index: 25; }
+    </style>
+        <script>
+            // 註冊 Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js');
+            }
+        </script>
+</head>
+<body id="main-body">
+
+    <nav class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] glass px-6 py-3 rounded-full shadow-2xl flex space-x-6 text-[10px] font-bold uppercase tracking-widest">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="鬱金香之森">
+    <link rel="apple-touch-icon" href="icon-192.png">
+        <a href="#hero" class="hover:text-pink-500 transition">Hero</a>
+        <a href="#history" class="hover:text-pink-500 transition">History</a>
+        <a href="#anatomy" class="hover:text-pink-500 transition">Science</a>
+        <a href="#calendar" class="hover:text-pink-500 transition">Season</a>
+        <a href="#gallery" class="hover:text-pink-500 transition">Catalog</a>
+        <a href="#garden" class="hover:text-pink-500 transition">Garden</a>
+        <a href="#salon" class="hover:text-pink-500 transition">Salon</a>
+    </nav>
+
+    <section id="hero" class="h-screen flex flex-col justify-center items-center text-center">
+        <div id="hero-tulip" class="mb-6"></div>
+        <h1 class="text-6xl md:text-7xl font-bold cute-font mb-3">鬱金香之森</h1>
+        <p class="text-lg opacity-30 tracking-[0.6em] uppercase">The Digital Herbarium</p>
+    </section>
+
+    <section id="history" class="py-20 bg-white">
+        <div class="max-w-5xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+            <div>
+                <h2 class="text-3xl font-bold cute-font mb-6">歷史長河中的瑰寶</h2>
+                <div class="space-y-6 border-l-2 border-pink-100 pl-6">
+                    <div>
+                        <b class="text-[#ff758c] text-sm">11世紀：天山深處的起源</b>
+                        <p class="text-xs text-gray-500 mt-1">最早起源於天山山脈。鄂圖曼帝國將其引入庭園，蘇丹將其視為真主在人間的化身。</p>
+                    </div>
+                    <div>
+                        <b class="text-[#ff758c] text-sm">1593年：跨越歐洲大陸</b>
+                        <p class="text-xs text-gray-500 mt-1">植物學家克魯修斯將第一顆球根帶入荷蘭萊頓大學。</p>
+                    </div>
+                    <div>
+                        <b class="text-[#ff758c] text-sm">1637年：鬱金香狂熱</b>
+                        <p class="text-xs text-gray-500 mt-1">歷史上第一個金融泡沫。一顆球根的價格足以買下豪宅。</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass p-8 rounded-[40px] text-center">
+                <div class="sway mb-4 opacity-40 text-4xl">🌷</div>
+                <p class="italic text-gray-400 text-sm">"在所有花卉中，鬱金香最懂得靜默的奢華。"</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="anatomy" class="py-20 relative flex flex-col items-center">
+        <h2 class="text-4xl font-bold cute-font mb-12">生理機能解密</h2>
+        <div class="relative max-w-md w-full">
+            <svg viewBox="0 0 400 600" id="anatomy-svg" class="w-full drop-shadow-2xl">
+                <g class="cursor-pointer" onclick="showAna('petal')">
+                    <path d="M200,200 C150,200 130,100 200,50 C270,100 250,200 200,200" fill="#ff758c"/>
+                </g>
+                <rect x="195" y="200" width="10" height="280" fill="var(--l)" rx="5" class="cursor-pointer" onclick="showAna('stem')"/>
+                <g class="cursor-pointer" onclick="showAna('leaf')">
+                    <path d="M200,400 Q130,400 110,250" stroke="var(--l)" stroke-width="15" fill="rgba(0,0,0,0)" stroke-linecap="round"/>
+                    <path d="M200,450 Q280,450 310,320" stroke="var(--l)" stroke-width="15" fill="rgba(0,0,0,0)" stroke-linecap="round"/>
+                </g>
+                <path d="M200,480 C160,480 150,560 200,590 C250,560 240,480 200,480" fill="#d2b48c" class="cursor-pointer" onclick="showAna('bulb')"/>
+            </svg>
+            <div id="ana-petal" class="callout glass -top-16 -right-32">
+                <h4 class="text-lg font-bold text-pink-500 mb-2">被片 (Tepals)</h4>
+                <p class="leading-relaxed">鬱金香沒有花瓣與花萼之分，六片統稱為被片。其色彩用於吸引昆蟲。</p>
+            </div>
+            <div id="ana-stem" class="callout glass top-1/4 -left-48">
+                <h4 class="text-lg font-bold text-green-600 mb-2">花莖 (Scape)</h4>
+                <p class="leading-relaxed">具備顯著的向光性。即便切下放入花瓶，花莖仍會繼續生長。</p>
+            </div>
+            <div id="ana-leaf" class="callout glass top-2/3 -right-48">
+                <h4 class="text-lg font-bold text-emerald-700 mb-2">麟葉 (Leaves)</h4>
+                <p class="leading-relaxed">表面有蠟質層，能阻擋病原菌。凹槽設計能引導雨水回根部。</p>
+            </div>
+            <div id="ana-bulb" class="callout glass bottom-0 -left-48">
+                <h4 class="text-lg font-bold text-yellow-800 mb-2">鱗莖 (Bulb)</h4>
+                <p class="leading-relaxed">地下能量工廠。每顆球根內都封存了明年的微縮花朵。</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="calendar" class="py-20 bg-gray-50/50">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <h2 class="text-3xl font-bold cute-font mb-12">歲月律動時軸</h2>
+            <div class="glass rounded-[40px] p-12 flex flex-col items-center">
+                <div id="season-drawing" class="mb-8 transform scale-125"></div>
+                <div class="w-full max-w-xl px-6 mb-8">
+                    <input type="range" id="timeline" min="0" max="100" step="1" value="33" oninput="updateTimeline(this.value)">
+                    <div class="flex justify-between text-[9px] font-bold text-gray-400 uppercase mt-3 px-1">
+                        <span>Jan</span><span>Mar</span><span>Apr</span><span>Jun</span><span>Oct</span><span>Dec</span>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <h3 id="cal-title" class="text-4xl font-bold cute-font text-[#ff758c] mb-4">四月</h3>
+                    <p id="cal-desc" class="text-gray-500 max-w-md mx-auto leading-relaxed text-sm"></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="gallery" class="py-20">
+        <div class="max-w-6xl mx-auto px-6">
+            <h2 class="text-4xl font-bold cute-font text-center mb-12">15 品系圖鑑百科</h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-6" id="variety-grid"></div>
+        </div>
+    </section>
+
+    <section id="garden" class="py-20 bg-[#fff5f7]">
+        <div class="max-w-5xl mx-auto px-6 text-center">
+            <h2 class="text-3xl font-bold cute-font mb-10">大地工坊</h2>
+            <div class="grid grid-cols-3 gap-6 mb-12">
+                <button onclick="digAll()" class="big-action-btn glass p-6 rounded-[30px] flex flex-col items-center space-y-3">
+                    <svg width="40" viewBox="0 0 40 40" stroke="var(--s)" fill="none" stroke-width="2">
+                        <path d="M10,10 L30,30 M5,35 L15,25"/>
+                    </svg>
+                    <span class="font-bold text-xs">翻土挖洞</span>
+                </button>
+                <button onclick="plantAll()" class="big-action-btn glass p-6 rounded-[30px] flex flex-col items-center space-y-3">
+                    <svg width="35" viewBox="0 0 40 40" fill="#d2b48c">
+                        <circle cx="20" cy="20" r="15"/>
+                    </svg>
+                    <span class="font-bold text-xs">埋入球根</span>
+                </button>
+                <button onclick="waterAll()" class="big-action-btn glass p-6 rounded-[30px] flex flex-col items-center space-y-3">
+                    <svg width="40" viewBox="0 0 40 40" stroke="#3498db" fill="none" stroke-width="2">
+                        <path d="M10,20 Q20,5 30,20 L30,35 L10,35 Z"/>
+                    </svg>
+                    <span class="font-bold text-xs">澆水生長</span>
+                </button>
+            </div>
+            <div class="h-[350px] glass rounded-[60px] relative flex items-end justify-center space-x-6 pb-16">
+                <div class="absolute bottom-0 w-full h-24 bg-[#5d4037]/10 rounded-b-[60px]"></div>
+                <div class="plot-box"><div class="soil-base"></div><div id="slot-0"></div></div>
+                <div class="plot-box"><div class="soil-base"></div><div id="slot-1"></div></div>
+                <div class="plot-box"><div class="soil-base"></div><div id="slot-2"></div></div>
+                <div class="plot-box"><div class="soil-base"></div><div id="slot-3"></div></div>
+                <div class="plot-box"><div class="soil-base"></div><div id="slot-4"></div></div>
+                <button id="hv-btn" onclick="hvAll()" class="hidden absolute top-1/2 -translate-y-1/2 bg-[#ff758c] text-white px-10 py-4 rounded-full font-bold shadow-2xl z-50 hover:scale-110 transition active:scale-95">一鍵收割</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="salon" class="py-20">
+        <div class="max-w-6xl mx-auto px-6 grid lg:grid-cols-4 gap-8">
+            <div class="lg:col-span-1 glass p-6 rounded-[40px]">
+                <h4 class="font-bold cute-font text-xl mb-4 text-center">植物繪畫室</h4>
+                <canvas id="painter" width="200" height="200" class="w-full mb-4 shadow-inner border border-gray-100"></canvas>
+                <!-- 擴充後的顏色面板：15色 -->
+                <div class="grid grid-cols-5 gap-2 mb-4">
+                    <button onclick="setC('#4a7c59', this)" class="color-btn active" style="background: #4a7c59"></button>
+                    <button onclick="setC('#2d5a27', this)" class="color-btn" style="background: #2d5a27"></button>
+                    <button onclick="setC('#8bc34a', this)" class="color-btn" style="background: #8bc34a"></button>
+                    <button onclick="setC('#ff758c', this)" class="color-btn" style="background: #ff758c"></button>
+                    <button onclick="setC('#e91e63', this)" class="color-btn" style="background: #e91e63"></button>
+                    
+                    <button onclick="setC('#9c27b0', this)" class="color-btn" style="background: #9c27b0"></button>
+                    <button onclick="setC('#673ab7', this)" class="color-btn" style="background: #673ab7"></button>
+                    <button onclick="setC('#2196f3', this)" class="color-btn" style="background: #2196f3"></button>
+                    <button onclick="setC('#03a9f4', this)" class="color-btn" style="background: #03a9f4"></button>
+                    <button onclick="setC('#ffd700', this)" class="color-btn" style="background: #ffd700"></button>
+
+                    <button onclick="setC('#ff9800', this)" class="color-btn" style="background: #ff9800"></button>
+                    <button onclick="setC('#ff5722', this)" class="color-btn" style="background: #ff5722"></button>
+                    <button onclick="setC('#795548', this)" class="color-btn" style="background: #795548"></button>
+                    <button onclick="setC('#607d8b', this)" class="color-btn" style="background: #607d8b"></button>
+                    <button onclick="setC('#000000', this)" class="color-btn" style="background: #000000"></button>
+                </div>
+                <button onclick="clrC()" class="w-full py-2 mb-2 glass rounded-lg text-xs font-bold hover:bg-white transition">清空畫布</button>
+                <button onclick="svD()" class="w-full py-3 bg-[#ff758c] text-white rounded-xl font-bold hover:bg-[#ff5a7a] transition">儲存到花籃</button>
+            </div>
+            
+            <!-- 插花沙龍區域：修正按鈕層級 -->
+            <div class="lg:col-span-2 h-[550px] glass rounded-[60px] relative shadow-2xl flex justify-center items-end" ondragover="allow(event)" ondrop="plS(event)" id="salon-box">
+                <!-- s-canvas 作為插花放置層 -->
+                <div id="s-canvas" class="absolute inset-0 z-10 pointer-events-auto"></div>
+                
+                <!-- 優雅水藍細頸玻璃瓶 -->
+                <svg width="150" height="240" viewBox="0 0 100 130" class="opacity-40 mb-8 pointer-events-none" style="filter: drop-shadow(0 10px 20px rgba(0,188,212,0.2));">
+                    <defs>
+                        <linearGradient id="waterBlueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#e0f7fa" />
+                            <stop offset="100%" stop-color="#81d4fa" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M40,35 Q35,45 35,60 Q35,85 38,100 Q40,115 50,120 Q60,115 62,100 Q65,85 65,60 Q65,45 60,35 Z" 
+                          fill="url(#waterBlueGrad)" 
+                          stroke="#4fc3f7" 
+                          stroke-width="0.5"/>
+                    <ellipse cx="50" cy="35" rx="10" ry="2.5" fill="#b3e5fc" opacity="0.6"/>
+                    <ellipse cx="50" cy="120" rx="18" ry="3" fill="#0288d1" opacity="0.15"/>
+                </svg>
+
+                <!-- 修正：提高按鈕容器的 z-index 到 z-30，確保在 s-canvas (z-10) 之上可被點擊 -->
+                <div class="absolute bottom-6 w-full flex justify-between px-10 z-30" data-html2canvas-ignore>
+                    <button onclick="saveArrangement()" class="bg-[#ff758c] text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-[#ff5a7a] transition shadow-lg">下載 PNG 作品</button>
+                    <button onclick="clearSalon()" class="text-[10px] font-bold opacity-30 hover:opacity-60 transition uppercase">Reset Vase</button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-1 glass p-6 rounded-[40px] flex flex-col h-[550px]">
+                <h4 class="font-bold cute-font text-xl mb-6 flex justify-between">我的花籃 <span id="inv-c" class="text-pink-400">0</span></h4>
+                <div id="inv-grid" class="grid grid-cols-2 gap-3 overflow-y-auto custom-scroll flex-grow pr-2"></div>
+                <p class="text-[9px] text-gray-400 mt-4 text-center">拖拽物品到中間的花瓶布置，點擊插上的花可取消</p>
+            </div>
+        </div>
+    </section>
+
+    <div id="modal" class="fixed inset-0 bg-black/70 backdrop-blur-lg z-[500] p-6" onclick="closeM()">
+        <div class="glass max-w-5xl w-full max-h-[90vh] overflow-y-auto custom-scroll p-10 rounded-[60px] relative" onclick="event.stopPropagation()">
+            <button onclick="closeM()" class="absolute top-8 right-8 text-3xl opacity-50 hover:opacity-100 transition">&times;</button>
+            <div id="m-content" class="flex flex-col items-center"></div>
+        </div>
+    </div>
+
+    <script>
+        // 完整的 15 品系百科資料庫
+        const VARS = [
+            { id: 1, name: "單瓣早花型", color: "#ff758c", svg: "classic", origin: "中亞天山山脈", bloomTime: "3月上旬 - 3月下旬", height: "25-35cm", history: "最早於16世紀引入歐洲的純粹型態，保留了野生鬱金香的原始基因。這個品系是所有現代鬱金香的祖先，其簡潔的六瓣結構被視為完美比例的典範。在文藝復興時期的植物畫中頻繁出現。", feature: "花瓣厚實且具蠟質層，能有效抵禦早春的霜凍與多變氣候。單層花瓣使其在清晨陽光下呈現半透明的夢幻質感。花期雖短但開花整齊，常用於大面積的景觀佈置。", care: "需充足日照，排水良好的砂質壤土最佳。耐寒性極強，適合寒帶種植。", lang: "純潔與希望", use: "適合庭園前景、盆栽、切花" },
+            { id: 2, name: "重瓣早花型", color: "#ffb3c1", svg: "double", origin: "荷蘭育種", bloomTime: "3月中旬 - 4月上旬", height: "30-40cm", history: "17世紀荷蘭育種家追求如牡丹般的華麗感而培育。最初被稱為「雙重美人」，在黃金時代的靜物畫中常與水果、昆蟲一同描繪，象徵財富與豐饒。", feature: "擁有多層次花瓣，完全盛開時直徑可達10cm，如同蓬鬆的蓮花。花瓣數量可達20-30片，每片都有細微的色階變化。花朵重量較大，建議種植在避風處以防折損。", care: "需肥沃土壤，開花期需適度支撐。花後需及時剪除以保存球根能量。", lang: "永恆與優雅", use: "高級切花、婚禮佈置、攝影素材" },
+            { id: 3, name: "凱旋型", color: "#9c27b0", svg: "classic", origin: "20世紀雜交選育", bloomTime: "4月中旬", height: "40-50cm", history: "1923年首次育成，是單瓣早花型與達爾文型的雜交後代。現今切花市場的絕對主力，佔全球鬱金香產量的60%以上。", feature: "莖幹極強韌，花型在瓶插時不易散開，瓶插壽命可達7-10天。花色範圍最廣，從純白到近黑色應有盡有。花瓣邊緣圓潤，盛開後呈現完美的杯型。", care: "適應性強，對土壤要求不嚴。適合商業化大規模種植。", lang: "成功與自信", use: "商業切花、花束主材、節慶佈置" },
+            { id: 4, name: "達爾文雜交型", color: "#f44336", svg: "classic", origin: "荷蘭", bloomTime: "4月下旬 - 5月上旬", height: "55-65cm", history: "以進化論之父達爾文命名，象徵其「適者生存」的強健特性。1960年代大量培育，用以取代容易感染病毒的原始達爾文型。", feature: "株高可達60cm以上，花頭巨大，莖幹粗壯如筆桿。耐風雨能力極佳，即使在暴雨後仍能挺立。花色飽和度高，紅色品種尤其鮮豔奪目。", care: "需深植（15-20cm），空間需求較大。適合大型花壇與公園綠地。", lang: "熱烈的愛", use: "大型景觀、公共空間、後景植栽" },
+            { id: 5, name: "單瓣晚花型", color: "#e91e63", svg: "classic", origin: "法國南部", bloomTime: "5月上旬 - 5月中旬", height: "45-55cm", history: "春末最後綻放的優雅句點，常被稱為「春天的告別之花」。在印象派畫家莫內的花園中大量種植，其柔和的色調完美融入暮春景致。", feature: "花瓣邊緣圓潤，質地如絲綢般細膩。花期較長（2-3週），且隨著時間推移，花色會產生微妙的漸變效果。", care: "喜溫暖氣候，開花期需充足水分。適合與其他晚春花卉混植。", lang: "平靜的幸福", use: "自然風庭園、混合花境、切花" },
+            { id: 6, name: "百合型", color: "#ffd700", svg: "lily", origin: "土耳其安納托利亞高原", bloomTime: "4月中旬 - 5月上旬", height: "45-60cm", history: "深受鄂圖曼帝國宮廷喜愛。其優雅的尖瓣造型常出現在伊茲尼克陶瓷與波斯地毯的圖案中。", feature: "花瓣尖端外翻，如百合般纖細優美。完全開放時呈星形，極具異國情調。花莖柔韌，隨風搖曳時姿態曼妙。", care: "需良好排水，忌積水。適合岩石花園與地中海風格庭園。", lang: "高貴與驕傲", use: "特色切花、藝術攝影、展覽用花" },
+            { id: 7, name: "流蘇型", color: "#ff4081", svg: "fringed", origin: "突變選育", bloomTime: "4月下旬", height: "40-50cm", history: "1930年代由荷蘭育種家從自然突變中選育而成。花瓣邊緣的細碎流蘇是基因突變造成的細胞過度增生現象。", feature: "花瓣邊緣具細密的針狀流蘇，如同蕾絲花邊。在陽光下會產生獨特的光影效果。觸感柔軟，視覺與觸覺都極具戲劇效果。", care: "需避免強風，流蘇易受損。適合盆栽近距離觀賞。", lang: "細膩的心", use: "精品切花、婚禮捧花、藝術創作" },
+            { id: 8, name: "綠花型", color: "#8bc34a", svg: "classic", origin: "稀有自然變種", bloomTime: "4月中旬 - 5月上旬", height: "40-55cm", history: "花瓣中帶有永恆的綠色條紋或斑塊，這是葉綠體在花瓣細胞中持續活躍的罕見現象。在維多利亞時代被視為植物學奇蹟。", feature: "花瓣保有葉綠素，呈現獨特的綠色調。花期比一般品種長，因為綠色組織能持續進行光合作用。", care: "需半日照，過強光照會使綠色褪去。適合林下或建築物北側種植。", lang: "永恆生命力", use: "自然風花藝、綠色主題婚禮、植物標本" },
+            { id: 9, name: "林布蘭型", color: "#673ab7", svg: "classic", origin: "17世紀荷蘭", bloomTime: "4月中旬", height: "40-60cm", history: "以荷蘭畫家林布蘭命名。原本的條紋是由病毒引起，現代品種則是通過基因技術模擬該效果培育而成，完全健康。", feature: "花瓣上有不規則的火焰狀、羽毛狀或條紋狀圖案，每朵都是獨一無二的藝術品。色彩對比強烈。", care: "現代品種不帶病毒，可與其他鬱金香混植。需肥沃土壤以維持鮮豔色彩。", lang: "華麗夢想", use: "藝術收藏、高級花藝、攝影素材" },
+            { id: 10, name: "鸚鵡型", color: "#ff9800", svg: "parrot", origin: "法國", bloomTime: "4月下旬 - 5月上旬", height: "40-55cm", history: "1665年首次記錄於法國，因花瓣扭曲如鸚鵡羽毛而得名。路易十四的凡爾賽宮花園中曾專設展示區。", feature: "花瓣邊緣深裂、扭曲，是所有鬱金香中花徑最大的。極具雕塑感與戲劇張力。花朵沉重，莖幹需支撐。", care: "需避風處種植，花朵過重易折。適合大型容器或靠牆花壇。", lang: "狂野之愛", use: "展覽用花、藝術裝置、高端花藝" },
+            { id: 11, name: "重瓣晚花型", color: "#d81b60", svg: "double", origin: "歐洲", bloomTime: "5月上旬 - 5月下旬", height: "40-50cm", history: "又稱「牡丹鬱金香」。在英國維多利亞時代的莊園中極受歡迎，常與玫瑰、芍藥搭配種植。", feature: "花球沉重碩大，層次極豐富（30-40片花瓣），完全盛開時如同微縮的牡丹。花期長達3週，觀賞期極長。", care: "需肥沃深厚土壤，開花期需支撐與遮蔭（避免花瓣曬傷）。", lang: "圓滿幸福", use: "婚禮花藝、母親節花束、豪華佈置" },
+            { id: 12, name: "考夫曼型", color: "#ffeb3b", svg: "lily", origin: "中亞土庫曼", bloomTime: "3月上旬", height: "15-25cm", history: "以俄國植物學家考夫曼命名。這是最早開花的品系，在雪還未完全融化時就能綻放。", feature: "矮生品種。陽光下花瓣完全展開呈六角星形。葉片具紫色或灰綠色斑點，觀賞價值高。耐寒性極強。", care: "適合前景種植，需充足日照。球根小巧，可密植形成花毯效果。", lang: "溫暖迎接", use: "岩石花園、盆栽、邊緣種植" },
+            { id: 13, name: "佛斯特型", color: "#ff5722", svg: "classic", origin: "中亞荒漠地帶", bloomTime: "3月中旬 - 4月上旬", height: "30-45cm", history: "以英國園藝家佛斯特爵士命名。這是少數能適應乾旱氣候的鬱金香，在原生地可於礫石荒漠中生長。", feature: "花頭巨大（直徑可達12cm），色彩極鮮豔。葉片寬大，表面有蠟質層。耐旱力為鬱金香中之冠。", care: "需全日照與排水極佳的砂質土。適合地中海氣候區與乾燥花園。", lang: "誠摯邀請", use: "旱生花園、礫石景觀、原生植物區" },
+            { id: 14, name: "格里吉型", color: "#b71c1c", svg: "classic", origin: "土庫曼與烏茲別克", bloomTime: "3月下旬 - 4月中旬", height: "20-30cm", history: "以俄國將軍格里吉命名。葉片上的紫色波浪紋是其最大特徵，是適應高原強紫外線的保護機制。", feature: "葉片具紫色、褐色條紋，不開花也極具觀賞價值。花朵巨大（相對植株高度），呈碗狀。", care: "需冷涼氣候與充足日照。適合寒帶與高山地區種植。", lang: "獨特魅力", use: "特色庭園、葉色觀賞、植物收藏" },
+            { id: 15, name: "原種鬱金香", color: "#ec407a", svg: "classic", origin: "中亞、地中海", bloomTime: "3月 - 5月", height: "10-40cm", history: "泛指所有未經人工雜交的野生鬱金香。是所有園藝品種的祖先，保留了最原始的基因多樣性。", feature: "植株小巧，抗病性與抗逆性最強。能連年回花而不需挖起。色彩多為基本色，簡潔有力。", care: "依原生地環境種植（乾燥型需排水，高山型需冷涼）。適合自然化種植。", lang: "初心不變", use: "自然風庭園、生態復育、基因保存" }
+        ];
+
+        let inventory = JSON.parse(localStorage.getItem('tulip_v7_inv')) || [];
+        let pStates = [0,0,0,0,0], pFlrs = [null,null,null,null,null];
+        let currentColor = '#4a7c59';
+
+        // SVG 繪製工具
+        function drawT(type, color, w, h) {
+            let p = `M25,40 C5,40 5,10 25,0 C45,10 45,40 25,40`;
+            if(type==='lily') p = `M25,40 C5,40 -10,10 25,0 C60,10 45,40 25,40`;
+            if(type==='double') p = `M25,40 C5,40 0,10 25,0 C50,10 45,40 25,40 M22,12 C12,18 12,28 25,32`;
+            if(type==='parrot') p = `M25,40 C5,45 -5,15 25,0 C55,15 45,45 25,40 M15,25 Q20,30 25,25`;
+            if(type==='fringed') p = `M25,40 C5,40 5,10 25,0 C45,10 45,40 25,40 M10,35 L15,38 L10,40 M20,40 L22,43 L20,45 M30,40 L32,43 L30,45 M40,35 L35,38 L40,40`;
+            return `<svg viewBox="0 0 50 150" width="${w}" height="${h}" class="sway mx-auto"><path d="M25,150 L25,40" stroke="var(--l)" stroke-width="4"/><path d="${p}" fill="${color}"/></svg>`;
+        }
+
+        function drawL(idx) {
+            let c = { d: "#5d4037", b: "#d2b48c", l: "#4a7c59", f: "#ff758c" };
+            let s = "";
+            if(idx==0||idx==5) s = `<circle cx="50" cy="100" r="18" fill="${c.b}"/><path d="M10,80 Q50,70 90,80" stroke="${c.d}" stroke-width="5" fill="none"/>`;
+            else if(idx==1||idx==4) s = `<path d="M50,85 L50,50 Q40,40 50,20 Q60,40 50,50" fill="${c.l}"/><path d="M10,80 Q50,70 90,80" stroke="${c.d}" stroke-width="5" fill="none"/>`;
+            else if(idx==2) s = `<path d="M50,100 L50,40" stroke="${c.l}" stroke-width="4"/><path d="M50,40 C30,40 30,0 50,0 C70,0 70,40 50,40" fill="${c.f}"/>`;
+            else s = `<circle cx="50" cy="80" r="20" fill="none" stroke="${c.b}" stroke-dasharray="5"/>`;
+            return `<svg viewBox="0 0 100 120" width="100" class="mx-auto">${s}</svg>`;
+        }
+
+        const M_DATA = [
+            {n:"一月 - 潛伏",d:"低溫春化中。球根內部的澱粉正轉化為糖分，為春天做準備。"},
+            {n:"三月 - 甦醒",d:"萌芽初期。尖芽衝破土表，此時需要充足的光照與適度的水分。"},
+            {n:"四月 - 繁盛",d:"生命巔峰。色彩最濃郁的季節，花莖會根據光線方向調整角度。"},
+            {n:"六月 - 收納",d:"夏季休眠。挖出球根，置於通風乾燥處以防腐爛。"},
+            {n:"十月 - 啟動",d:"秋植時節。土溫降至15度以下，最適合將希望埋入地底。"},
+            {n:"十二月 - 禦寒",d:"模擬寒流。確保球根獲得足夠低溫，明年才會開出大花。"}
+        ];
+
+        function updateTimeline(v) {
+            const idx = Math.min(5, Math.floor((v/101)*6));
+            document.getElementById('cal-title').innerText = M_DATA[idx].n;
+            document.getElementById('cal-desc').innerText = M_DATA[idx].d;
+            document.getElementById('season-drawing').innerHTML = drawL(idx);
+        }
+
+        function renderG() {
+            const grid = document.getElementById('variety-grid');
+            grid.innerHTML = "";
+            VARS.forEach(v => {
+                const d = document.createElement('div');
+                d.className = "glass p-4 rounded-[30px] text-center cursor-pointer hover:bg-white transition hover:scale-105";
+                d.onclick = () => openM(v);
+                d.innerHTML = `${drawT(v.svg, v.color, 60, 100)}<h5 class="text-[10px] font-bold mt-2">${v.name}</h5>`;
+                grid.appendChild(d);
+            });
+        }
+
+        function openM(v) {
+            const m = document.getElementById('m-content');
+            m.innerHTML = `
+                <div class="mb-10 transform scale-125">${drawT(v.svg, v.color, 100, 160)}</div>
+                <h2 class="text-4xl font-bold cute-font text-[#ff758c] mb-2">${v.name}</h2>
+                <p class="text-xs tracking-wider text-gray-400 mb-8 uppercase">${v.origin} | ${v.bloomTime} | ${v.height}</p>
+                
+                <div class="grid md:grid-cols-2 gap-6 text-left w-full mb-6">
+                    <div class="glass p-6 rounded-[30px]">
+                        <h3 class="text-pink-400 font-bold mb-3 flex items-center">📜 歷史起源</h3>
+                        <p class="text-sm leading-relaxed text-gray-700">${v.history}</p>
+                    </div>
+                    <div class="glass p-6 rounded-[30px]">
+                        <h3 class="text-pink-400 font-bold mb-3 flex items-center">🔬 生理特徵</h3>
+                        <p class="text-sm leading-relaxed text-gray-700">${v.feature}</p>
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-4 text-left w-full">
+                    <div class="glass p-5 rounded-[25px]">
+                        <h3 class="text-green-600 font-bold mb-2 text-sm flex items-center">🌱 栽培要點</h3>
+                        <p class="text-xs leading-relaxed text-gray-600">${v.care}</p>
+                    </div>
+                    <div class="glass p-5 rounded-[25px]">
+                        <h3 class="text-purple-600 font-bold mb-2 text-sm flex items-center">💝 花語象徵</h3>
+                        <p class="text-xs leading-relaxed text-gray-600">${v.lang}</p>
+                    </div>
+                    <div class="glass p-5 rounded-[25px]">
+                        <h3 class="text-blue-600 font-bold mb-2 text-sm flex items-center">✨ 應用場景</h3>
+                        <p class="text-xs leading-relaxed text-gray-600">${v.use}</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeM() { document.getElementById('modal').classList.remove('active'); }
+        function showAna(id) { document.querySelectorAll('.callout').forEach(c=>c.classList.remove('active')); document.getElementById(`ana-${id}`).classList.add('active'); }
+
+        // 種植邏輯
+        function digAll() { pStates.forEach((s, i) => { if(s===0) { pStates[i]=1; document.getElementById(`slot-${i}`).parentElement.classList.add('active'); document.getElementById(`slot-${i}`).innerHTML='<div class="w-8 h-3 bg-black/10 rounded-full"></div>'; } }); }
+        function plantAll() { pStates.forEach((s, i) => { if(s===1) { pStates[i]=2; document.getElementById(`slot-${i}`).innerHTML='<div class="w-10 h-10 bg-[#d2b48c] rounded-full mb-[-8px]"></div>'; } }); }
+        function waterAll() { pStates.forEach((s, i) => { if(s===2) { pStates[i]=3; pFlrs[i]=VARS[Math.floor(Math.random()*VARS.length)]; document.getElementById(`slot-${i}`).innerHTML=`<div class="grow-anim">${drawT(pFlrs[i].svg, pFlrs[i].color, 60, 120)}</div>`; } }); document.getElementById('hv-btn').classList.remove('hidden'); }
+        function hvAll() { pFlrs.forEach(f => { if(f) inventory.push({...f, isC: false}); }); pStates.fill(0); pFlrs.fill(null); document.querySelectorAll('.plot-box').forEach(p=>{p.classList.remove('active'); p.querySelector('div:last-child').innerHTML=""}); document.getElementById('hv-btn').classList.add('hidden'); saveI(); renderInv(); }
+
+        // 繪圖邏輯
+        const cvs = document.getElementById('painter'), ctx = cvs.getContext('2d');
+        let painting = false;
+        function initP() { ctx.lineWidth=6; ctx.lineCap='round'; cvs.onmousedown=(e)=>{painting=true; ctx.beginPath(); const r=cvs.getBoundingClientRect(); ctx.moveTo(e.clientX-r.left, e.clientY-r.top);}; cvs.onmousemove=(e)=>{if(!painting)return; const r=cvs.getBoundingClientRect(); ctx.strokeStyle=currentColor; ctx.lineTo(e.clientX-r.left, e.clientY-r.top); ctx.stroke();}; cvs.onmouseup=()=>{painting=false;}; }
+        function setC(c, btn){ currentColor=c; document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+        function clrC(){ ctx.clearRect(0,0,200,200); }
+        function svD(){ inventory.push({name:"手繪配材", img:cvs.toDataURL(), isC:true}); saveI(); renderInv(); clrC(); }
+        function saveI(){ localStorage.setItem('tulip_v7_inv', JSON.stringify(inventory)); }
+
+        // 庫存與沙龍邏輯
+        function renderInv() {
+            const g = document.getElementById('inv-grid'); g.innerHTML = "";
+            document.getElementById('inv-c').innerText = inventory.length;
+            inventory.forEach((it, i) => {
+                const d = document.createElement('div');
+                d.className = "glass p-3 rounded-2xl flex items-center justify-center cursor-grab hover:scale-105 transition shadow-sm";
+                d.draggable = true;
+                d.ondragstart = (e) => { e.dataTransfer.setData("idx", i); };
+                if(it.isC) d.innerHTML = `<img src="${it.img}" class="w-10 h-10 object-contain">`;
+                else d.innerHTML = drawT(it.svg, it.color, 30, 60);
+                g.appendChild(d);
+            });
+        }
+
+        function allow(e) { e.preventDefault(); }
+        function plS(e) {
+            e.preventDefault();
+            const idx = e.dataTransfer.getData("idx");
+            const item = inventory[idx];
+            if(!item) return;
+            const box = document.getElementById('salon-box').getBoundingClientRect();
+            const x = e.clientX - box.left - 40;
+            const y = e.clientY - box.top - 80;
+            const d = document.createElement('div');
+            d.className = "draggable-item transition-transform hover:scale-110 pointer-events-auto";
+            d.style.left = x + 'px'; d.style.top = y + 'px';
+            d.onclick = function() { this.remove(); };
+            if(item.isC) d.innerHTML = `<img src="${item.img}" class="w-20 h-20 object-contain">`;
+            else d.innerHTML = drawT(item.svg, item.color, 80, 150);
+            document.getElementById('s-canvas').appendChild(d);
+        }
+
+        function clearSalon() { document.getElementById('s-canvas').innerHTML = ""; }
+
+        // 下載作品功能：修正按鈕點擊
+        function saveArrangement() {
+            const box = document.getElementById('salon-box');
+            html2canvas(box, { 
+                backgroundColor: "#fffafb", 
+                scale: 2,
+                logging: false,
+                useCORS: true
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `tulip-forest-salon-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                console.error("下載出錯：", err);
+            });
+        }
+
+        window.onload = () => {
+            renderG(); renderInv(); initP(); updateTimeline(33);
+            document.getElementById('hero-tulip').innerHTML = drawT('classic', 'var(--p)', 120, 180);
+        };
+    </script>
+</body>
+</html>
